@@ -27,7 +27,8 @@ exports.createCO2  = function( title , name , targetCO2 ) {
         valid:  [],
         name:   name + ' (CO2Devices)',
         exist:  false,
-        typeAVG: 3
+        typeAVG: 3,
+        validGroup: true
     };
 
     var test_interval = null;
@@ -55,7 +56,7 @@ exports.createCO2  = function( title , name , targetCO2 ) {
     
                 createErrorRule( name , oCO2 );
 
-                createRuleCO2 ( title , name , oCO2 );
+                createRulesCO2 ( title , name , oCO2 );
             }
         }
     }, 5000);  
@@ -111,8 +112,8 @@ function devicesExists( topic ) {
  *          устройства к объекту с массивами, с которым в дальнейшем работает главная 
  *          функция
  * @param {*} source    Массив или переменная - источник физических устройств
- * @param {*} target    Объект, в который добавятся только существующие устройства
- * @param {*} name      Имя для добавления нового виртуального устройства
+ * @param {object} target    Объект, в который добавятся только существующие устройства
+ * @param {string} name      Имя для добавления нового виртуального устройства
  */
 function reloadDeviceArray( source , target , name ) {
     if (source == undefined) return;
@@ -143,8 +144,8 @@ function reloadDeviceArray( source , target , name ) {
 /**
  * @brief   Функция создания виртуального устройства.
  *          В дальнейшем к этому устройству добавляются дополнительные контролы
- * @param {String}  title   Описание виртуального устройства (Можно на русском)
- * @param {String}  name    Имя виртуального устройства (Будет отображаться в новом виртуальном кстройстве как name/... )
+ * @param {string}  title   Описание виртуального устройства (Можно на русском)
+ * @param {string}  name    Имя виртуального устройства (Будет отображаться в новом виртуальном кстройстве как name/... )
  */
 function createVirtualDevice( title , name ) {
     defineVirtualDevice( name, {
@@ -238,26 +239,26 @@ function createErrorRule( name , target ) {
             if ( i != -1 ) dev[target.virt[i] + '#error'] = newValue;
             if ( newValue ) {
                 target.valid[i] = false;
+                var v = false;
+                // Проверяем все остальные устройства на валидность.
+                // Если ВСЕ устройства не валидны, значит вся группа не валидна
+                target.valid.forEach( function(item) {
+                    if (item) v = true;
+                });
+                target.validGroup = v;
             } else {
                 // Создаем таймер на задержку после восстановления связи
                 setTimeout(function () {
                     target.valid[i] = true;
+                    target.validGroup = true;
                 }, 2000);
-            }
-            // Тут проверим, если ВСЕ датчики не валидны, то подсветим ошибкой среднее значение
-            var V = false;
-            target.valid.forEach( function(item) {
-                if ( item ) V = true;
-            });
-            if ( !V ) {
-                dev[name]['average#error'] = "r";
             }
         }
     });
 }
 
 
-function createRuleCO2 ( title , name , CO2 ) {
+function createRulesCO2 ( title , name , CO2 ) {
 
     // Правило отслеживает изменение типа подсчета среднего значения
     defineRule(name + '_modeAVGChange', {
@@ -266,6 +267,18 @@ function createRuleCO2 ( title , name , CO2 ) {
         },
         then: function () {
             CO2.typeAVG = dev[name]['typeAVG'];
+        }
+    });
+
+    // Правило отслеживает валидность группы датчиков CO2
+    // Если нет ни одного датчика, которому можно верить, то 
+    // подсветим для наглядности
+    defineRule(name + '_CO2ValidGroup', {
+        asSoonAs: function () {
+            return !CO2.validGroup;
+        },
+        then: function () {
+            dev[name]['average#error'] = "r";
         }
     });
 
