@@ -3,7 +3,7 @@
 
 <h1 align="left">
   <br>
-  <img height="150" src="logo_wb-sensor-CO2.png">
+  <img height="150" src="Logo_wb-sensor-CO2.png">
   <br>
   <b>Модуль для датчиков углекислого газа CO2</b>
   <br>
